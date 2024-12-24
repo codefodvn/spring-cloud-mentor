@@ -1,0 +1,156 @@
+
+// Phần này định nghĩa các cấu hình và phụ thuộc cần thiết cho quá trình xây dựng Gradle.
+// Trong trường hợp này, nó không định nghĩa phụ thuộc cho chính ứng dụng của bạn mà chỉ cho quá trình xây dựng.
+buildscript {
+    // ext là một cách để khai báo các biến hoặc giá trị có thể tái sử dụng trong toàn bộ cấu hình Gradle của dự án.
+    // Đây là cách để bạn lưu trữ các giá trị có thể thay đổi, ví dụ như phiên bản của thư viện hoặc plugin mà bạn sử dụng.
+    ext {
+        // Dòng này định nghĩa một biến springCloudVersion và gán nó giá trị "2024.0.0". Biến này sẽ được sử dụng sau này trong file cấu hình Gradle,
+        // giúp bạn dễ dàng thay đổi phiên bản của Spring Cloud mà không cần phải cập nhật nó ở nhiều nơi trong tệp cấu hình.
+        set('springCloudVersion', "2024.0.0")
+    }
+}
+
+// Phần này dùng để áp dụng các plugin vào dự án Gradle của bạn.
+// Các plugin này mở rộng chức năng của Gradle và giúp bạn cấu hình dự án một cách dễ dàng hơn.
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "3.4.1"
+    id 'io.spring.dependency-management' version "1.1.7"
+}
+
+allprojects {
+    // thông tin dự án
+    group = 'codefod.com'
+    version = '0.0.1-SNAPSHOT'
+
+    // các plugin cần thiết cho dự án
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+
+    // Chỉ định phiên bản Java mà mã nguồn sẽ được biên dịch. Ở đây, sử dụng Java 23.
+    sourceCompatibility = '23'
+    // Chỉ định phiên bản Java mà mã đã biên dịch sẽ chạy trên đó. Đây là cách đảm bảo mã đã được biên dịch tương thích với môi trường runtime cụ thể.
+    targetCompatibility = '23'
+
+    repositories {
+        // Chỉ định kho lưu trữ Gradle Plugin Portal, nơi Gradle tìm kiếm các plugin cần thiết cho quá trình xây dựng.
+        gradlePluginPortal()
+        // Chỉ định kho lưu trữ Maven Central, nơi chứa rất nhiều thư viện và phụ thuộc Java phổ biến, bao gồm cả Spring Boot và các thư viện khác.
+        mavenCentral()
+    }
+
+    configurations {
+        // Đây là một cấu hình dành cho các thư viện chỉ sử dụng trong quá trình biên dịch (compile), không được đưa vào runtime.
+        // Trong trường hợp này, annotationProcessor được đưa vào compileOnly để giúp xử lý annotation mà không cần đưa thư viện này vào runtime.
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+
+        //  Chỉ định các thư viện phụ thuộc sẽ được sử dụng trong runtime.
+        //  Đồng thời, cấu hình này loại bỏ một số thư viện (exclude) không cần thiết cho dự án:
+        implementation {
+            // Loại bỏ các thư viện liên quan đến Log4j (để tránh xung đột với các thư viện logging khác, như SLF4J).
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+        }
+    }
+
+    // Đây là cấu hình để kiểm soát việc tạo JAR cho ứng dụng Spring Boot.
+    bootJar {
+        enabled = true
+    }
+
+    // Đây là một phần của Spring Dependency Management Plugin. Trong đoạn mã này, nó nhập một BOM (Bill of Materials) từ Spring Cloud, giúp quản lý phiên bản của các phụ thuộc Spring Cloud.
+    // BOM chứa các thông tin về các thư viện Spring Cloud và phiên bản tương ứng mà dự án có thể sử dụng.
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        }
+    }
+
+    dependencies {
+        // Spring Boot Starter là bộ thư viện cơ bản cho ứng dụng Spring Boot.
+        implementation 'org.springframework.boot:spring-boot-starter'
+
+        // Spring Boot Starter Web để xây dựng ứng dụng web, bao gồm các thành phần như Tomcat và Spring MVC.
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+
+        // Spring Boot Starter Actuator cung cấp các tính năng giám sát và quản lý ứng dụng như health checks, metrics, etc.
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+        // Apache HttpClient5 dùng để thực hiện các kết nối HTTP. Đây là một thư viện mạnh mẽ cho việc thực hiện các yêu cầu HTTP trong Java.
+        implementation 'org.apache.httpcomponents.client5:httpclient5:5.4'
+
+        // Micrometer Tracing Bridge Brave tích hợp Micrometer với Brave để theo dõi phân tán và trích xuất thông tin về các yêu cầu.
+        implementation 'io.micrometer:micrometer-tracing-bridge-brave:1.4.1'
+
+        // Micrometer Registry Prometheus dùng để xuất các metrics từ ứng dụng vào hệ thống giám sát Prometheus.
+        implementation 'io.micrometer:micrometer-registry-prometheus:1.14.2'
+
+        // Json-log-filter giúp lọc và ghi log dạng JSON, hỗ trợ việc kiểm soát thông tin ghi log trong ứng dụng.
+        implementation 'com.github.skjolber.json-log-filter:core:4.1.3'
+
+        // ModelMapper là thư viện giúp chuyển đổi giữa các đối tượng (DTO, Entity). Thường dùng để map dữ liệu giữa các lớp trong ứng dụng.
+        implementation "org.modelmapper:modelmapper:3.2.0"
+
+        // Apache Commons Lang cung cấp các tiện ích bổ sung cho các thao tác với chuỗi, số học, ngày tháng, v.v.
+        implementation "org.apache.commons:commons-lang3:3.13.0"
+
+        // Commons IO cung cấp các chức năng đọc, ghi tệp và xử lý các dòng dữ liệu I/O.
+        implementation "commons-io:commons-io:2.15.0"
+
+        // Commons Codec hỗ trợ các chức năng mã hóa và giải mã như Base64, Hex, MD5, v.v.
+        implementation "commons-codec:commons-codec:1.16.0"
+
+        // Jackson Core là thư viện chính để xử lý JSON trong Java. Cung cấp các công cụ để đọc, ghi JSON.
+        implementation "com.fasterxml.jackson.core:jackson-core:2.15.3"
+
+        // Jackson Databind cho phép ánh xạ giữa JSON và các đối tượng Java (POJO).
+        implementation "com.fasterxml.jackson.core:jackson-databind:2.15.3"
+
+        // Jackson Annotations cung cấp các annotation giúp điều khiển quá trình ánh xạ giữa JSON và các đối tượng Java.
+        implementation "com.fasterxml.jackson.core:jackson-annotations:2.15.3"
+
+        // Jackson Module Parameter Names hỗ trợ ánh xạ các tham số của phương thức theo tên từ JSON.
+        implementation "com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.3"
+
+        // Jackson Datatype JSr310 giúp hỗ trợ xử lý các kiểu dữ liệu mới trong Java 8+ như LocalDate, LocalDateTime.
+        implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.3"
+
+        // JJWT API là thư viện dùng để tạo và phân tích các JSON Web Tokens (JWT), thường dùng cho việc xác thực và ủy quyền trong ứng dụng.
+        implementation "io.jsonwebtoken:jjwt-api:0.11.5"
+
+        // JJWT Impl là phần triển khai của JJWT API, giúp xử lý việc mã hóa và giải mã JWT.
+        runtimeOnly "io.jsonwebtoken:jjwt-impl:0.11.5"
+
+        // JJWT Jackson hỗ trợ việc chuyển đổi JSON Web Token sang các đối tượng JSON.
+        runtimeOnly "io.jsonwebtoken:jjwt-jackson:0.11.5"
+
+        // Lombok giúp tự động tạo mã nguồn cho các phương thức getter, setter, toString, equals, v.v., thông qua annotation. Giảm thiểu mã nguồn lặp lại.
+        compileOnly "org.projectlombok:lombok:1.18.32"
+        annotationProcessor "org.projectlombok:lombok:1.18.32"
+
+        // MapStruct là thư viện giúp mã hóa và chuyển đổi giữa các đối tượng mà không cần viết mã thủ công. Thường được dùng để ánh xạ giữa DTOs và Entities.
+        implementation "org.mapstruct:mapstruct:1.5.5.Final"
+
+        // MapStruct Processor là phần bổ sung để xử lý annotation @Mapper và tự động tạo mã ánh xạ giữa các đối tượng.
+        annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
+
+        // Spring Boot Configuration Processor giúp tự động sinh ra thông tin cấu hình từ các lớp cấu hình trong Spring Boot.
+        annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+        // Spring Boot Starter Test là bộ thư viện cần thiết để thực hiện các bài kiểm tra đơn vị (unit tests) với Spring Boot, bao gồm các thư viện như JUnit, Mockito, v.v.
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+}
+
+// Đây là cách bạn xác định và cấu hình tác vụ test trong Gradle.
+// Tác vụ test là một phần của hệ thống Gradle mặc định, chịu trách nhiệm chạy các bài kiểm tra đơn vị (unit tests) của dự án.
+tasks.named('test') {
+    // Dòng này chỉ định rằng Gradle sẽ sử dụng JUnit Platform để thực thi các bài kiểm tra.
+    // JUnit Platform là một nền tảng chạy các bài kiểm tra trong JUnit 5 và các framework kiểm tra khác (ví dụ: JUnit 4, TestNG),
+    // vì vậy bạn cần cấu hình điều này nếu dự án của bạn sử dụng JUnit 5 hoặc một framework kiểm tra tương tự.
+    useJUnitPlatform()
+}

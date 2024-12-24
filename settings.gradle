@@ -1,0 +1,4 @@
+rootProject.name = 'spring-cloud-mentor'
+
+include 'config'
+include 'gateway'
